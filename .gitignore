@@ -1,0 +1,28 @@
+# Google API credentials
+token.json
+token_*.json
+client_secret.json
+video_library.json
+
+# YouTube cookies - sensitive session data, never commit!
+cookies.txt
+
+# Batch state (runtime data)
+batch_state.json
+
+# Local video clips
+clips/
+
+# Python virtual environment
+.venv/
+
+# Vim swap files
+.*.swp
+*.swp
+
+# Python cache & build files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/

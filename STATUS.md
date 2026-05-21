@@ -1,0 +1,1 @@
+/home/ubuntu/agent-data/projects/youtube-ai-manager/STATUS.md
