@@ -14,6 +14,7 @@ import tempfile
 
 from local_video_ingest import sha256_file
 from video_ir_indexing import SCHEMA
+from publication_lock import serialized_publication
 
 
 def _persist(path: Path, data: dict) -> None:
@@ -48,6 +49,7 @@ def _validate(ir: dict, title: str, description: str, authorized: bool) -> Path:
     return media
 
 
+@serialized_publication
 def publish_private(ir_path: str, *, youtube, media_factory, title: str,
                     description: str, authorized: bool = False,
                     channel_verified: bool = False, category_id: str = "22",
@@ -57,6 +59,8 @@ def publish_private(ir_path: str, *, youtube, media_factory, title: str,
     The caller must verify the channel identity against a separately authorized
     account/profile; this function never discovers credentials or starts OAuth.
     """
+    if max_chunks < 1 or not category_id.isdigit():
+        raise ValueError("invalid upload configuration")
     path = Path(ir_path)
     ir = json.loads(path.read_text(encoding="utf-8"))
     if not channel_verified:
