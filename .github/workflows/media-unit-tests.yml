@@ -1,0 +1,36 @@
+name: Media Capability Unit Tests
+
+on:
+  pull_request:
+    paths:
+      - 'local_video_ingest.py'
+      - 'media_capabilities.py'
+      - 'video_ir_indexing.py'
+      - 'gemini_index_backend.py'
+      - 'youtube_ai_manager.py'
+      - 'test_*video*.py'
+      - 'test_media_capabilities.py'
+      - 'test_indexer_safety_contract.py'
+      - '.github/workflows/media-unit-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-media-unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Execute offline tests without API credentials
+        run: |
+          python -m unittest -v \
+            test_local_video_ingest \
+            test_media_capabilities \
+            test_video_ir_indexing \
+            test_gemini_index_backend \
+            test_indexer_safety_contract
