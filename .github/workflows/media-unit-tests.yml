@@ -45,6 +45,31 @@ jobs:
           python-version: '3.11'
       - name: Install Media Worker package without cloud dependencies
         run: python -m pip install -e .
+      - name: Fetch existing AgentOS NodeAdapter contract only
+        uses: actions/checkout@v4
+        with:
+          repository: alston-personal/agentmanager
+          ref: core/integration
+          path: agentos-core
+          sparse-checkout: |
+            agentos_node/__init__.py
+            agentos_node/node_adapter.py
+      - name: Verify integration with actual AgentOS AdapterRegistry
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          import sys
+          sys.path.insert(0, "agentos-core")
+          from agentos_node.node_adapter import AdapterRegistry, load_configured_adapters
+          adapters = load_configured_adapters("media_node_adapter")
+          registry = AdapterRegistry(adapters)
+          assert registry.capabilities() == ["media.capture.ingest"]
+          adapter = registry.resolve("media.capture.ingest")
+          assert adapter.execute({"action": "media.capture.ingest"})["status"] == "UNAVAILABLE"
+          assert adapter.describe()["live_verified"] is False
+          print("Actual AgentOS NodeAdapter registry successfully loaded candidate")
+          PY
       - name: Validate installed CLI interfaces
         run: |
           agentos-media-ingest --help
