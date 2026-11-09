@@ -50,7 +50,7 @@ def _validate(ir: dict, title: str, description: str, authorized: bool) -> Path:
 
 def publish_private(ir_path: str, *, youtube, media_factory, title: str,
                     description: str, authorized: bool = False,
-                    channel_verified: bool = False, max_chunks: int = 100000) -> dict:
+                    channel_verified: bool = False, category_id: str = "22",\n                    max_chunks: int = 100000) -> dict:
     """Only externally-authorized callers should provide a bound YouTube client.
 
     The caller must verify the channel identity against a separately authorized
@@ -80,7 +80,7 @@ def publish_private(ir_path: str, *, youtube, media_factory, title: str,
         request = youtube.videos().insert(
             part="snippet,status",
             body={"snippet":{"title":title.strip(), "description":description,
-                             "categoryId":"20"},
+                             "categoryId":category_id},
                   "status":{"privacyStatus":"private"}},
             media_body=media_body,
         )
