@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentos-media-worker"
+version = "0.1.0"
+description = "Bounded media ingest, video indexing and captions for the existing AgentOS/YouTube AI Manager"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+index = ["google-genai"]
+transcribe = ["faster-whisper"]
+publish = ["google-api-python-client", "google-auth-oauthlib"]
+
+[project.scripts]
+agentos-media-ingest = "local_video_ingest:main"
+agentos-media-scan = "media_watch_scan:main"
+agentos-media-index = "gemini_index_backend:main"
+
+[tool.setuptools]
+py-modules = [
+  "local_video_ingest",
+  "media_watch_scan",
+  "media_node_adapter",
+  "media_capabilities",
+  "media_receipt_projection",
+  "publication_lock",
+  "video_ir_indexing",
+  "gemini_index_backend",
+  "video_transcription",
+  "youtube_private_publisher"
+]
