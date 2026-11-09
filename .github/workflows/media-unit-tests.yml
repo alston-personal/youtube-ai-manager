@@ -9,6 +9,7 @@ on:
       - 'gemini_index_backend.py'
       - 'video_transcription.py'
       - 'youtube_private_publisher.py'
+      - 'publication_lock.py'
       - 'youtube_ai_manager.py'
       - 'test_*video*.py'
       - 'test_media_capabilities.py'
@@ -37,4 +38,5 @@ jobs:
             test_gemini_index_backend \
             test_indexer_safety_contract \
             test_video_transcription \
-            test_youtube_private_publisher
+            test_youtube_private_publisher \
+            test_publication_lock
