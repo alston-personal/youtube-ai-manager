@@ -8,6 +8,8 @@ from trusted configuration; task payloads may not select paths.
 from __future__ import annotations
 
 from collections.abc import Callable
+from pathlib import Path
+import os
 from typing import Any
 
 from media_watch_scan import scan_once
@@ -57,5 +59,26 @@ class MediaIngestAdapter:
 
 
 def create_adapter() -> MediaIngestAdapter:
-    """Off by default; requires trusted Windows session factory/binding."""
-    return MediaIngestAdapter()
+    """Fail-closed factory for existing AGENTOS_NODE_ADAPTERS registration.
+
+    The *trusted Node startup environment*, never a task payload, supplies the
+    allowlisted media directory and output directory. No implicit activation.
+    """
+    if os.environ.get("AGENTOS_MEDIA_ENABLED") != "1":
+        return MediaIngestAdapter()
+    root_raw = os.environ.get("AGENTOS_MEDIA_APPROVED_ROOT", "")
+    output_raw = os.environ.get("AGENTOS_MEDIA_IR_DIR", "")
+    if not root_raw or not output_raw:
+        return MediaIngestAdapter()
+    root, output = Path(root_raw), Path(output_raw)
+    if not root.is_absolute() or not output.is_absolute():
+        return MediaIngestAdapter()
+    if not root.is_dir() or root.is_symlink():
+        return MediaIngestAdapter()
+    # The IR directory may not be the media root itself.
+    if root.resolve() == output.resolve():
+        return MediaIngestAdapter()
+    source = os.environ.get("AGENTOS_MEDIA_SOURCE", "obs")
+    if source not in {"local", "wow", "obs", "other"}:
+        return MediaIngestAdapter()
+    return MediaIngestAdapter(approved_folder=str(root), ir_dir=str(output), source=source)
