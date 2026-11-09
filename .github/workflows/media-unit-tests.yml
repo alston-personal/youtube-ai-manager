@@ -1,0 +1,111 @@
+name: Media Capability Unit Tests
+
+on:
+  pull_request:
+    paths:
+      - 'local_video_ingest.py'
+      - 'media_capabilities.py'
+      - 'video_ir_indexing.py'
+      - 'gemini_index_backend.py'
+      - 'video_transcription.py'
+      - 'youtube_private_publisher.py'
+      - 'publication_lock.py'
+      - 'media_receipt_projection.py'
+      - 'media_watch_scan.py'
+      - 'media_node_adapter.py'
+      - 'pyproject.toml'
+      - 'youtube_ai_manager.py'
+      - 'test_*video*.py'
+      - 'test_media_capabilities.py'
+      - 'test_indexer_safety_contract.py'
+      - 'test_media_watch_scan.py'
+      - 'test_media_node_adapter.py'
+      - 'test_publication_lock.py'
+      - 'test_media_receipt_projection.py'
+      - 'test_video_transcription.py'
+      - 'test_youtube_private_publisher.py'
+      - '.github/workflows/media-unit-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-media-unit:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Media Worker package without cloud dependencies
+        run: python -m pip install -e .
+      - name: Fetch existing AgentOS NodeAdapter contract only
+        uses: actions/checkout@v4
+        with:
+          repository: alston-personal/agentmanager
+          ref: core/integration
+          path: agentos-core
+          sparse-checkout: |
+            agentos_node/__init__.py
+            agentos_node/node_adapter.py
+      - name: Verify integration with actual AgentOS AdapterRegistry
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          import sys
+          sys.path.insert(0, "agentos-core")
+          from agentos_node.node_adapter import AdapterRegistry, load_configured_adapters
+          adapters = load_configured_adapters("media_node_adapter")
+          registry = AdapterRegistry(adapters)
+          assert registry.capabilities() == ["media.capture.ingest"]
+          adapter = registry.resolve("media.capture.ingest")
+          assert adapter.execute({"action": "media.capture.ingest"})["status"] == "UNAVAILABLE"
+          assert adapter.describe()["live_verified"] is False
+          print("Actual AgentOS NodeAdapter registry successfully loaded candidate")
+          PY
+      - name: Validate installed CLI interfaces
+        run: |
+          agentos-media-ingest --help
+          agentos-media-scan --help
+          agentos-media-index --help
+          python -c "from media_node_adapter import create_adapter; assert create_adapter().describe()['live_verified'] is False"
+      - name: Execute offline tests without API credentials
+        shell: bash
+        run: |
+          python -m unittest -v \
+            test_local_video_ingest \
+            test_media_capabilities \
+            test_video_ir_indexing \
+            test_gemini_index_backend \
+            test_indexer_safety_contract \
+            test_video_transcription \
+            test_youtube_private_publisher \
+            test_publication_lock \
+            test_media_receipt_projection \
+            test_media_watch_scan \
+            test_media_node_adapter
+
+      - name: Build versioned deployable wheel
+        run: python -m pip wheel . --no-deps --wheel-dir dist
+      - name: Verify artifact installation (non-editable)
+        shell: bash
+        run: |
+          python -m pip uninstall -y agentos-media-worker
+          python -m pip install --force-reinstall --no-deps dist/*.whl
+          python -c "from media_node_adapter import create_adapter; assert create_adapter().execute({'action':'media.capture.ingest'})['status']=='UNAVAILABLE'"
+          agentos-media-scan --help
+      - name: Publish Windows build artifact for governed deployment
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: agentos-media-worker-windows-wheel
+          path: dist/*.whl
+          if-no-files-found: error
+          retention-days: 14
