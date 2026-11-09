@@ -41,3 +41,24 @@ python -m unittest -v test_local_video_ingest test_media_capabilities test_video
 5. Prove non-WoW consumer reuses the same provider with accepted ONE Experience and controlled cold/hydrated growth comparison per AgentOS #1768.
 
 Current state: source-level implementation and offline tests submitted; no formal CI, Windows deployment or ONE acceptance evidence yet.
+
+## Speech transcription (local, no AI cloud upload)
+Requires `faster-whisper` and a local Whisper model. Workflow integration invokes `video_transcription.transcribe_ir(ir_path, language=None)`. It checks the original SHA-256, produces time-checked SRT/VTT for actual speech, or marks `no_speech` without inventing dialog. The original media is never deleted.
+
+## First-time YouTube publishing (private, governed only)
+`youtube_private_publisher.publish_private` is a bounded API adapter intended to be called **only by a real authorized AgentOS Runtime/ONE task**. Caller must supply an independently verified YouTube channel client and effect authorization; it does not log in or silently publish. Before any remote write, it persists `upload_in_progress`. On ambiguous remote failures, it moves to `reconciliation_required` and **refuses automatic retry** until the operator/reconciler verifies whether a YouTube video exists. It returns a genuine video ID only after the API returns one, setting privacy to `private`.
+
+Example integration (not a standalone production command):
+```python
+from youtube_private_publisher import publish_private, google_media_factory
+# youtube must already be bound to the right authorized channel.
+# authorized and channel_verified must come from governance, never constant True in production.
+result = publish_private(ir_path, youtube=youtube, media_factory=google_media_factory,
+                         title=approved_title, description=approved_description,
+                         authorized=effect_authorized, channel_verified=channel_verified)
+```
+
+**Missing production gates:** multi-process lock/lease around upload journal; remote reconciliation after uncertain write; independent channel-ID verification and effect-token binding; actual YouTube OAuth scopes/quota and caption upload integration; Windows service/ONE transport; real media indexing and speech-quality evaluation. Therefore this code is **not authorized for unattended production publishing** yet.
+
+## Verified offline CI
+[GitHub Actions run #42547292582](https://github.com/alston-personal/youtube-ai-manager/actions/runs/42547292582) completed successfully after the publisher syntax fix. The run covers offline mocked upload consent, private visibility, and duplicate/ambiguous retry barriers; it does **not** prove live YouTube API upload.
