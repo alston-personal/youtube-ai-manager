@@ -62,3 +62,9 @@ result = publish_private(ir_path, youtube=youtube, media_factory=google_media_fa
 
 ## Verified offline CI
 [GitHub Actions run #42547292582](https://github.com/alston-personal/youtube-ai-manager/actions/runs/42547292582) completed successfully after the publisher syntax fix. The run covers offline mocked upload consent, private visibility, and duplicate/ambiguous retry barriers; it does **not** prove live YouTube API upload.
+
+## Publication concurrency and source-side receipt (2026-11-09)
+- `publication_lock.py`: atomic per-Video-IR lock, preventing two local publishers from performing concurrent inserts. An orphaned lock **fails closed** and requires reconciliation; it is deliberately not auto-stolen. This is local-host protection, not a distributed ONE lease.
+- `media_receipt_projection.py`: sanitized, deterministic `agentos.media-pipeline-source-receipt/v1` projection for existing ONE Runtime. Requires matching source SHA-256; records remote API upload ID when locally persisted, but explicitly marks `one_receipt_status=not_submitted`, `growth_proof_status=unverified`. Never includes local source path, credentials or private transcript.
+- True ONE acceptance and durable cross-node receipt remain separate work. Remote reconciliation still requires a governed authoritative channel verification and independent upload provenance; no blind reset of `reconciliation_required`.
+- [CI Run 42547770092](https://github.com/alston-personal/youtube-ai-manager/actions/runs/42547770092): completed successfully for source-level offline tests including lock and receipt projection. Live YouTube and ONE checks are not covered.
