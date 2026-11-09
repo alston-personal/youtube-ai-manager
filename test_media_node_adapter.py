@@ -1,5 +1,9 @@
 """NodeAdapter contract test; no real Windows node or ONE identity claimed."""
 import unittest
+import os
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from unittest.mock import patch
 from media_node_adapter import CAPABILITY, MediaIngestAdapter, create_adapter
 
 
@@ -38,3 +42,38 @@ class MediaNodeAdapterTests(unittest.TestCase):
 
 if __name__=="__main__":
     unittest.main()
+
+    def test_real_registry_factory_requires_trusted_environment(self):
+        with TemporaryDirectory() as root:
+            media = Path(root) / "recordings"
+            media.mkdir()
+            ir = Path(root) / "ir"
+            env = {
+                "AGENTOS_MEDIA_ENABLED": "1",
+                "AGENTOS_MEDIA_APPROVED_ROOT": str(media),
+                "AGENTOS_MEDIA_IR_DIR": str(ir),
+                "AGENTOS_MEDIA_SOURCE": "wow",
+            }
+            with patch.dict(os.environ, env, clear=True):
+                adapter = create_adapter()
+                self.assertEqual(adapter.capabilities(), (CAPABILITY,))
+                # No movie files, but this actually invokes the allowed scan.
+                outcome = adapter.execute({"action": CAPABILITY})
+                self.assertEqual(outcome["status"], "OK")
+                self.assertEqual(outcome["one_receipt_status"], "not_submitted")
+                self.assertFalse(adapter.describe()["live_verified"])
+
+    def test_incomplete_or_disabled_config_stays_unbound(self):
+        with TemporaryDirectory() as root:
+            for config in (
+                {"AGENTOS_MEDIA_ENABLED":"0", "AGENTOS_MEDIA_APPROVED_ROOT": root,
+                 "AGENTOS_MEDIA_IR_DIR": root + "/ir"},
+                {"AGENTOS_MEDIA_ENABLED":"1", "AGENTOS_MEDIA_APPROVED_ROOT": root},
+                {"AGENTOS_MEDIA_ENABLED":"1", "AGENTOS_MEDIA_APPROVED_ROOT": "relative",
+                 "AGENTOS_MEDIA_IR_DIR": root + "/ir"},
+                {"AGENTOS_MEDIA_ENABLED":"1", "AGENTOS_MEDIA_APPROVED_ROOT": root,
+                 "AGENTOS_MEDIA_IR_DIR": root},
+            ):
+                with self.subTest(config=config), patch.dict(os.environ, config, clear=True):
+                    outcome = create_adapter().execute({"action": CAPABILITY})
+                    self.assertEqual(outcome["status"], "UNAVAILABLE")
