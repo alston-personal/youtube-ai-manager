@@ -18,6 +18,12 @@ on:
       - 'test_*video*.py'
       - 'test_media_capabilities.py'
       - 'test_indexer_safety_contract.py'
+      - 'test_media_watch_scan.py'
+      - 'test_media_node_adapter.py'
+      - 'test_publication_lock.py'
+      - 'test_media_receipt_projection.py'
+      - 'test_video_transcription.py'
+      - 'test_youtube_private_publisher.py'
       - '.github/workflows/media-unit-tests.yml'
   workflow_dispatch:
 
@@ -26,7 +32,11 @@ permissions:
 
 jobs:
   offline-media-unit:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -42,6 +52,7 @@ jobs:
           agentos-media-index --help
           python -c "from media_node_adapter import create_adapter; assert create_adapter().describe()['live_verified'] is False"
       - name: Execute offline tests without API credentials
+        shell: bash
         run: |
           python -m unittest -v \
             test_local_video_ingest \
