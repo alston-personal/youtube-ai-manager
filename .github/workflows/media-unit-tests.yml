@@ -91,3 +91,21 @@ jobs:
             test_media_receipt_projection \
             test_media_watch_scan \
             test_media_node_adapter
+
+      - name: Build versioned deployable wheel
+        run: python -m pip wheel . --no-deps --wheel-dir dist
+      - name: Verify artifact installation (non-editable)
+        shell: bash
+        run: |
+          python -m pip uninstall -y agentos-media-worker
+          python -m pip install --force-reinstall --no-deps dist/*.whl
+          python -c "from media_node_adapter import create_adapter; assert create_adapter().execute({'action':'media.capture.ingest'})['status']=='UNAVAILABLE'"
+          agentos-media-scan --help
+      - name: Publish Windows build artifact for governed deployment
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: agentos-media-worker-windows-wheel
+          path: dist/*.whl
+          if-no-files-found: error
+          retention-days: 14
