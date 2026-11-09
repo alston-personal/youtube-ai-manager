@@ -137,8 +137,6 @@ def call_gemini(prompt, file_uri=None, mime_type=None, response_mime_type="appli
         sys.exit(1)
         
     ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
     
     gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
     
@@ -199,8 +197,6 @@ def upload_file_to_gemini(file_path, mime_type="video/mp4"):
     """Uploads file to Google Gemini Files API via HTTP REST protocol for non-SDK stability"""
     api_key = load_gemini_key()
     ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
     
     file_size = os.path.getsize(file_path)
     file_name = os.path.basename(file_path)
@@ -264,8 +260,6 @@ def check_gemini_file_status(file_name_api):
     """Checks processing state of uploaded file in Gemini API"""
     api_key = load_gemini_key()
     ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
     
     status_url = f"https://generativelanguage.googleapis.com/v1beta/{file_name_api}?key={api_key}"
     req = urllib.request.Request(status_url)
@@ -283,8 +277,6 @@ def delete_gemini_file(file_name_api):
     """Deletes uploaded temporary video file from Google Gemini storage for security"""
     api_key = load_gemini_key()
     ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
     
     delete_url = f"https://generativelanguage.googleapis.com/v1beta/{file_name_api}?key={api_key}"
     req = urllib.request.Request(delete_url, method="DELETE")
@@ -410,7 +402,7 @@ def fetch_captions(youtube, video_id):
         print(f"⚠️ Unable to fetch captions for video {video_id}: {e}")
         return None
 
-def analyze_video_multimodal(video_path, orig_title, orig_description, video_id=None):
+def analyze_video_multimodal(video_path, orig_title, orig_description, video_id=None, *, owned_temp=False):
     """Uploads low-res gameplay video to Gemini Files API and performs visual semantic indexing.
     Incorporates YouTube captions (if available) into the prompt to improve grounding.
     """
@@ -499,9 +491,9 @@ def analyze_video_multimodal(video_path, orig_title, orig_description, video_id=
     finally:
         # Clean up files both locally and on Gemini
         delete_gemini_file(file_name_api)
-        if os.path.exists(video_path):
+        if owned_temp and os.path.exists(video_path):
             os.remove(video_path)
-            print("🗑️ Cleaned up temporary local downloaded video file.")
+            print("🗑️ Cleaned up owned temporary local downloaded video file.")
 
 # ==========================================
 # 🛠️ YOUTUBE ACTIONS & OPERATIONS
@@ -850,7 +842,7 @@ def cmd_process(args):
             visual_index = []
         else:
             print("🤖 Invoking Google Gemini 2.5 Flash for multi-modal visual analysis...")
-            ai_data = analyze_video_multimodal(video_path, orig_title, orig_desc, video_id=video_id)
+            ai_data = analyze_video_multimodal(video_path, orig_title, orig_desc, video_id=video_id, owned_temp=True)
             if not ai_data:
                 print("❌ Error: Gemini failed to visually analyze the gameplay video!")
                 return
@@ -1254,8 +1246,6 @@ Respond ONLY with a valid JSON block of this schema:
     for attempt in range(max_retries):
         try:
             ctx = ssl.create_default_context()
-            ctx.check_hostname = False
-            ctx.verify_mode = ssl.CERT_NONE
             
             req = urllib.request.Request(
                 url,
