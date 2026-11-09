@@ -12,6 +12,7 @@ on:
       - 'publication_lock.py'
       - 'media_receipt_projection.py'
       - 'media_watch_scan.py'
+      - 'media_node_adapter.py'
       - 'youtube_ai_manager.py'
       - 'test_*video*.py'
       - 'test_media_capabilities.py'
@@ -43,4 +44,5 @@ jobs:
             test_youtube_private_publisher \
             test_publication_lock \
             test_media_receipt_projection \
-            test_media_watch_scan
+            test_media_watch_scan \
+            test_media_node_adapter
