@@ -40,9 +40,6 @@ class MediaNodeAdapterTests(unittest.TestCase):
         self.assertEqual(result["status"],"OK")
         self.assertEqual(result["one_receipt_status"],"not_submitted")
 
-if __name__=="__main__":
-    unittest.main()
-
     def test_real_registry_factory_requires_trusted_environment(self):
         with TemporaryDirectory() as root:
             media = Path(root) / "recordings"
@@ -77,3 +74,7 @@ if __name__=="__main__":
                 with self.subTest(config=config), patch.dict(os.environ, config, clear=True):
                     outcome = create_adapter().execute({"action": CAPABILITY})
                     self.assertEqual(outcome["status"], "UNAVAILABLE")
+
+
+if __name__ == '__main__':
+    unittest.main()
